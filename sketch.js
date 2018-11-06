@@ -27,6 +27,10 @@ const buttonMapping = {
 }
 
 const dot = new DOT(400,300);
+const recording = new RECORD();
+
+const exeurl = "https://script.google.com/macros/s/AKfycbxCm1DwMr4aguILPVMg9-L9Wh5GPT2JijZE_Fe2JDnbFaL6kuE/exec";
+
 function setup() {
   createCanvas(800,600);
   textAlign(LEFT,CENTER);
@@ -55,6 +59,7 @@ function draw() {
 
   // 尋找控制器
   let orderedGamepads = [];
+  
   let joyconR,joyconL;
   for(let i = 0; i < gamepads.length; i++) {
     gamepadArray.push(gamepads[i]);
@@ -111,16 +116,29 @@ function draw() {
             for(let i = 0; i < gp.buttons.length; i++) {
 
                 if(gp.buttons[i].pressed) {
+                    /*
                     const pressedId = (g * 15) + i + g;
-                    const pressedIndex = getIndex(pressedId);;
-
+                    const pressedIndex = getIndex(pressedId);
                     fill(200, 0, 0);
                     ellipse(85, 25 * pressedIndex + 30, 13, 13);
+                    */  
+                        switch (i) {
+                          case 0:
+                              recording.move(dot);
+                            break;
+                          case 3:
+                              recording.export();
+                            break;
+                          default:
+                            break;
+                        }
+
                 }
             }
         }
     }
     // drawing
+    recording.display();
     dot.display();
 }
 
@@ -151,5 +169,76 @@ function DOT(x,y){
     noStroke();
     fill(200, 0, 0);
     ellipse(this.x, this.y, this.diameter, this.diameter);
+  }
+}
+
+function RECORD(){
+  this.history = [];
+  this.upload = false;
+  
+  this.move = function(dot){
+    //console.log(dot.x);
+    if (this.history.length === 0){
+      this.history.push({
+        positionx: dot.x,
+        positiony: dot.y,
+        action:"move",
+        timestamp:millis()
+      });
+      //console.log(this.history[0].timestamp);
+    }else{
+      let ms = this.history[this.history.length-1].timestamp;
+      //console.log(this.history.length);
+      if (millis()-ms > 150){
+
+        this.history.push({
+          positionx: dot.x,
+          positiony: dot.y,
+          action:"move",
+          timestamp:millis()
+        });
+      }
+    }
+    //console.log(this.history.length);
+  };
+  this.display = function(){
+      for (let i=0;i<this.history.length;i+=1) {
+          noStroke();
+          fill(200, 0, 200,50);
+          ellipse(this.history[i].positionx, this.history[i].positiony, 20, 20);
+          //console.log('a');
+          if (i>0){
+            
+            strokeWeight(5);
+            stroke(200,0,200,50);
+            line(this.history[i].positionx, this.history[i].positiony,this.history[i-1].positionx, this.history[i-1].positiony);
+            
+          }
+      }
+  }
+
+  this.export = function(){
+    if (this.upload){
+      alert('uploaded!!');
+      this.upload = false;
+    }else{
+      let psjson ={};
+        let psstr = "";
+
+        for (let i=0;i<this.history.length;i+=1) {
+          psstr+= this.history[i].positionx+","+this.history[i].positiony+","+this.history[i].action;
+          if (i!=this.history.length-1){
+            psstr+=";"
+          }
+        }
+        //print(psstr);
+        // 輸出到spreadsheet
+        var exportout = {
+                data: psstr,
+                sheetUrl: 'https://docs.google.com/spreadsheets/d/1K2TH2v8jS_jixtg_2Z-Lm6VMTd7RujcplWWi9t624Ac/edit?usp=sharing',
+                sheetTag: 'history'
+        };
+        $.get(exeurl, exportout);
+      }
   }
 }
