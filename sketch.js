@@ -67,16 +67,17 @@ function draw() {
    //避免控制器list為null
     if (gamepadArray[i] === null){
     }else{//win10之右控制器id名為  Wireless Gamepad (Vendor: 057e Product: 2007)
+      //console.log(gamepadArray[i].id);
       if (gamepadArray[i].id === 'Wireless Gamepad (Vendor: 057e Product: 2007)'){
           joyconR = i;
       }else{
+          //console.log('a');
           joyconL = i;
       }
     }
   }
   orderedGamepads.push(gamepadArray[joyconR]);
   orderedGamepads.push(gamepadArray[joyconL]);
-
   let pressed = [];
 
     for (let g = 0; g < orderedGamepads.length; g++) {
@@ -175,7 +176,8 @@ function DOT(x,y){
 function RECORD(){
   this.history = [];
   this.upload = false;
-  
+  this.exportstamp = 0;
+
   this.move = function(dot){
     //console.log(dot.x);
     if (this.history.length === 0){
@@ -189,7 +191,7 @@ function RECORD(){
     }else{
       let ms = this.history[this.history.length-1].timestamp;
       //console.log(this.history.length);
-      if (millis()-ms > 150){
+      if (millis()-ms > 300){
 
         this.history.push({
           positionx: dot.x,
@@ -197,6 +199,7 @@ function RECORD(){
           action:"move",
           timestamp:millis()
         });
+
       }
     }
     //console.log(this.history.length);
@@ -221,24 +224,29 @@ function RECORD(){
     if (this.upload){
       alert('uploaded!!');
       this.upload = false;
+      this.exportstamp = millis();
     }else{
-      let psjson ={};
-        let psstr = "";
 
-        for (let i=0;i<this.history.length;i+=1) {
-          psstr+= this.history[i].positionx+","+this.history[i].positiony+","+this.history[i].action;
-          if (i!=this.history.length-1){
-            psstr+=";"
+      if (millis()-this.exportstamp > 300){
+        let psjson ={};
+          let psstr = "";
+
+          for (let i=0;i<this.history.length;i+=1) {
+            psstr+= this.history[i].positionx+","+this.history[i].positiony+","+this.history[i].action;
+            if (i!=this.history.length-1){
+              psstr+=";"
+            }
           }
-        }
-        //print(psstr);
-        // 輸出到spreadsheet
-        var exportout = {
-                data: psstr,
-                sheetUrl: 'https://docs.google.com/spreadsheets/d/1K2TH2v8jS_jixtg_2Z-Lm6VMTd7RujcplWWi9t624Ac/edit?usp=sharing',
-                sheetTag: 'history'
-        };
-        $.get(exeurl, exportout);
+          //print(psstr);
+          // 輸出到spreadsheet
+          var exportout = {
+                  data: psstr,
+                  sheetUrl: 'https://docs.google.com/spreadsheets/d/1K2TH2v8jS_jixtg_2Z-Lm6VMTd7RujcplWWi9t624Ac/edit?usp=sharing',
+                  sheetTag: 'history'
+          };
+          $.get(exeurl, exportout);
       }
+
+    }
   }
 }
