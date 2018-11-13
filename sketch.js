@@ -31,6 +31,8 @@ const recording = new RECORD();
 
 const exeurl = "https://script.google.com/macros/s/AKfycbxCm1DwMr4aguILPVMg9-L9Wh5GPT2JijZE_Fe2JDnbFaL6kuE/exec";
 
+var timestamp=0;
+
 function setup() {
   createCanvas(800,600);
   textAlign(LEFT,CENTER);
@@ -43,8 +45,10 @@ function draw() {
   
 
   let buttonCount = 0;
-  for(let p = 0; p <= buttonNum; p++) {
-    const name = buttonMapping[p] || p;
+  //for(let p = 0; p <= buttonNum; p++) {
+    //const name = buttonMapping[p] || p;
+
+    /*
     if(isNaN(name)){
       fill(0);
       text(name, 100, 25 * buttonCount + 30);
@@ -52,7 +56,8 @@ function draw() {
       ellipse(85, 25 * buttonCount + 30, 13, 13);
       buttonCount++;
     }
-  }
+    */
+  //}
 
   let gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
   let gamepadArray = [];
@@ -111,35 +116,41 @@ function draw() {
             }
             // ニュートラル位置
             else {
-              ellipse(arrowX, 100, 20, 20);
+            	
+            	if (millis()-timestamp > 100){
+		            //按鈕
+		            for(let i = 0; i < gp.buttons.length; i++) {	
+		                if(gp.buttons[i].pressed) {
+		                        switch (i) {
+		                          case 0:
+		                              recording.move(dot);
+		                            break;
+		                          case 3:
+		                              recording.export();
+		                            break;
+		                          case 1:
+		                              if (recording.mode===0){
+		                              	recording.mode=1;
+		                              }else{
+		                              	recording.mode=0;
+		                              }
+		                            break;
+		                          default:
+		                            break;
+		                        }
+
+		                }
+		           	}
+		           	timestamp = millis();
+	            }
             }
 
-            for(let i = 0; i < gp.buttons.length; i++) {
-
-                if(gp.buttons[i].pressed) {
-                    /*
-                    const pressedId = (g * 15) + i + g;
-                    const pressedIndex = getIndex(pressedId);
-                    fill(200, 0, 0);
-                    ellipse(85, 25 * pressedIndex + 30, 13, 13);
-                    */  
-                        switch (i) {
-                          case 0:
-                              recording.move(dot);
-                            break;
-                          case 3:
-                              recording.export();
-                            break;
-                          default:
-                            break;
-                        }
-
-                }
-            }
+            
         }
     }
+
     // drawing
-    recording.display();
+    recording.display(dot);
     dot.display();
 }
 
@@ -176,7 +187,8 @@ function DOT(x,y){
 function RECORD(){
   this.history = [];
   this.upload = false;
-  this.exportstamp = 0;
+  //this.exportstamp = 0;
+  this.mode = 0;
 
   this.move = function(dot){
     //console.log(dot.x);
@@ -185,26 +197,27 @@ function RECORD(){
         positionx: dot.x,
         positiony: dot.y,
         action:"move",
-        timestamp:millis()
+        //timestamp:millis()
       });
       //console.log(this.history[0].timestamp);
     }else{
-      let ms = this.history[this.history.length-1].timestamp;
+      //let ms = this.history[this.history.length-1].timestamp;
       //console.log(this.history.length);
-      if (millis()-ms > 300){
+      //if (millis()-ms > 300){
 
         this.history.push({
           positionx: dot.x,
           positiony: dot.y,
           action:"move",
-          timestamp:millis()
+          //timestamp:millis()
         });
 
-      }
+      //}
     }
     //console.log(this.history.length);
   };
-  this.display = function(){
+  this.display = function(dot){
+
       for (let i=0;i<this.history.length;i+=1) {
           noStroke();
           fill(200, 0, 200,50);
@@ -218,23 +231,56 @@ function RECORD(){
             
           }
       }
-  }
+    //text
+    noStroke();
+    fill(0);
+    text('按下X切換模式', 100,  30);
+    fill(180,50,50);
+    switch (this.mode){
+    	case 0:
+  			text('目前模式：實時操作', 100,  60);
+  			text('請挪動左類比搖桿，觀察手臂與游標的關係', 150,  90);
+  			break;
+  		case 1:
+  			text('目前模式：規劃操作', 100,  60);
+  			text('請挪動左類比搖桿', 150,  90);
+  			text('點擊A規劃點位，點擊Y執行路徑', 150,  120);
+  			break;
+    }
 
+    if (millis()%1000<100){
+    	//console.log(dot.x);
+    	if (this.mode===0){
+    		//執行upload
+    		let psstr = dot.x+','+dot.y+',0,0';
+	    		let exportout = {
+	                  data: psstr,
+	                  sheetUrl: 'https://docs.google.com/spreadsheets/d/1K2TH2v8jS_jixtg_2Z-Lm6VMTd7RujcplWWi9t624Ac/edit?usp=sharing',
+	                  sheetTag: 'history'
+	          	};
+	    		$.get(exeurl, exportout);
+    		
+    	}
+
+    }
+  }
   this.export = function(){
     if (this.upload){
       alert('uploaded!!');
       this.upload = false;
-      this.exportstamp = millis();
+      //this.exportstamp = millis();
     }else{
 
-      if (millis()-this.exportstamp > 300){
+      //if (millis()-this.exportstamp > 300){
         let psjson ={};
           let psstr = "";
 
           for (let i=0;i<this.history.length;i+=1) {
-            psstr+= this.history[i].positionx+","+this.history[i].positiony+","+this.history[i].action;
+            
             if (i!=this.history.length-1){
-              psstr+=";"
+              psstr+=this.history[i].positionx+","+this.history[i].positiony+","+this.mode+",1;"
+            }else{
+            	psstr+= this.history[i].positionx+","+this.history[i].positiony+","+this.mode+',0';
             }
           }
           //print(psstr);
@@ -245,7 +291,9 @@ function RECORD(){
                   sheetTag: 'history'
           };
           $.get(exeurl, exportout);
-      }
+          alert('請觀察手臂運動');
+          this.history = [];
+     //}
 
     }
   }
